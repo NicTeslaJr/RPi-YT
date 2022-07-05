@@ -1,9 +1,9 @@
 import re
+import time
 import json
 import subprocess
 import youtube_dl
 
-from datetime import datetime
 from subprocess import CalledProcessError
 
 class MediaPlayer():
@@ -67,15 +67,14 @@ class MediaPlayer():
         }
         with youtube_dl.YoutubeDL(ytdl_opts) as ytdl:
             info = ytdl.extract_info(query, download=False)
-
-        cls.nowPlaying['title'] = info['entries'][0]['title']
-        cls.nowPlaying['webpage_url'] = info['entries'][0]['webpage_url']
-        cls.nowPlaying['duration'] = info['entries'][0]['duration']
-        cls.nowPlaying['view_count'] = info['entries'][0]['view_count']
-        cls.nowPlaying['thumbnail_url'] = info['entries'][0]['thumbnails'][0]['url']
-        cls.nowPlaying['uploader'] = info['entries'][0]['uploader']
-        cls.nowPlaying['channel_url'] = info['entries'][0]['channel_url']
-        cls.nowPlaying['start_time'] = str(datetime.now())
+            cls.nowPlaying['title'] = info['entries'][0]['title']
+            cls.nowPlaying['webpage_url'] = info['entries'][0]['webpage_url']
+            cls.nowPlaying['duration'] = info['entries'][0]['duration']
+            cls.nowPlaying['view_count'] = info['entries'][0]['view_count']
+            cls.nowPlaying['thumbnail_url'] = info['entries'][0]['thumbnails'][0]['url']
+            cls.nowPlaying['uploader'] = info['entries'][0]['uploader']
+            cls.nowPlaying['channel_url'] = info['entries'][0]['channel_url']
+            cls.nowPlaying['start_time'] = f'{time.time():.0f}'
 
         # TODO: can we get progress from cmd_mpv_play.communicate() ? or something similar?
         cls.cmd_mpv_play = subprocess.Popen([
@@ -83,6 +82,38 @@ class MediaPlayer():
         ], stdout=subprocess.DEVNULL)
         
         return (True, cls.nowPlaying)
+    
+    @classmethod
+    def mpvDirectPlay(cls, query: str):
+        cls.cmd_mpv_play = subprocess.Popen([
+            '/usr/bin/mpv', '--no-video', '--no-terminal', '--input-ipc-server=/tmp/mpvsocket_rpi-yt', f'ytdl://ytsearch:{query}'
+        ], stdout=subprocess.DEVNULL)
+        return (True, None)
+    
+    @classmethod
+    def ytdlSearch(cls, query:str, limit: int):
+        ytdl_opts = {
+            'default_search': f'ytsearch{limit}',
+            'quiet': True,
+            'warnings': 'no-warnings'
+        }
+        with youtube_dl.YoutubeDL(ytdl_opts) as ytdl:
+            info = ytdl.extract_info(query, download=False)
+            results = []
+            for result in info['entries']:
+                results.append(
+                    {
+                        'title': result['title'],
+                        'webpage_url': result['webpage_url'],
+                        'duration': result['duration'],
+                        'view_count': result['view_count'],
+                        'thumbnail_url': result['thumbnails'][0]['url'],
+                        'uploader': result['uploader'],
+                        'channel_url': result['channel_url']
+                    }
+                )
+        return results
+
     
     @classmethod
     def mpvTogglePause(cls):

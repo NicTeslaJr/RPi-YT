@@ -82,6 +82,51 @@ async def mpv_play(request):
         }
     })
 
+@mpvc.get('/directPlay')
+async def mpv_direct_play(request):
+    try:
+        query = request.args.get('q')
+        if not query: raise ValueError
+    except ValueError:
+        return json({
+            'status': False,
+            'code': 400,
+            'data': {
+                'message': f'Bad Request. Expected Endpoint: {app.url_for("mpvControl.mpv_direct_play")}?q={{str}}'
+            }
+        }, status=400)
+    nowPlaying = mp.mpvDirectPlay(query)
+    return json({
+        'status': True,
+        'code': 200,
+        'data': {
+            'mediaInfo': nowPlaying[1]
+        }
+    })
+
+@mpvc.get('/search')
+async def ytdl_search(request):
+    try:
+        limit = abs(int(request.args.get('limit')))
+        query = request.args.get('q')
+        if not query: raise ValueError
+    except (TypeError, ValueError):
+        return json({
+            'status': False,
+            'code': 400,
+            'data': {
+                'message': f'Bad Request. Expected Endpoint: {app.url_for("mpvControl.ytdl_search")}?q={{str}}&limit={{int}}'
+            }
+        }, status=400)
+    results = mp.ytdlSearch(query, limit)
+    return json({
+        'status': True,
+        'code': 200,
+        'data': {
+            'results': results
+        }
+    })
+
 @mpvc.get('/resume')
 @mpvc.get('/pause')
 async def mpv_pause(request):
